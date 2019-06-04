@@ -31,15 +31,16 @@ class Main extends Component {
         const [, token] = param.split(/[=&]/);
         localStorage.setItem('@Spotanalysis:accessToken', token);
         spotify.setAccessToken(token);
+        window.location.reload();
       } else {
-        window.location.href = 'https://spotanalysis-back.herokuapp.com/login'
+        window.location.href = 'https://spotanalysis-back.herokuapp.com/login';
       }
     } else {
       spotify.setAccessToken(ACCESS_TOKEN);
       spotify.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE', (err, data) => {
         if (err) {
           localStorage.removeItem('@Spotanalysis:accessToken');
-          window.location.href = 'https://spotanalysis-back.herokuapp.com/login'
+          window.location.href = 'https://spotanalysis-back.herokuapp.com/login';
         }
       });
     }

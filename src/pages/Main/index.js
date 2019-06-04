@@ -32,7 +32,9 @@ class Main extends Component {
         localStorage.setItem('@Spotanalysis:accessToken', token);
         spotify.setAccessToken(ACCESS_TOKEN);
       } else {
-        window.location.href = `${process.env.BACK_END_URI}/login` || 'http://localhost:8888/login';
+        window.location.href = process.env.BACK_END_URI
+          ? `${process.env.BACK_END_URI}/login`
+          : 'http://localhost:8888/login';
       }
     } else {
       if (ACCESS_TOKEN === null) {
@@ -45,7 +47,9 @@ class Main extends Component {
       spotify.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE', (err, data) => {
         if (err) {
           localStorage.removeItem('@Spotanalysis:accessToken');
-          window.location.href = `${process.env.BACK_END_URI}/login` || 'http://localhost:8888/login';
+          window.location.href = process.env.BACK_END_URI
+            ? `${process.env.BACK_END_URI}/login`
+            : 'http://localhost:8888/login';
         }
       });
     }

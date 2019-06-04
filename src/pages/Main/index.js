@@ -30,17 +30,11 @@ class Main extends Component {
       if (param.startsWith('#access_token')) {
         const [, token] = param.split(/[=&]/);
         localStorage.setItem('@Spotanalysis:accessToken', token);
-        spotify.setAccessToken(ACCESS_TOKEN);
+        spotify.setAccessToken(token);
       } else {
         window.location.href = 'https://spotanalysis-back.herokuapp.com/login'
       }
     } else {
-      if (ACCESS_TOKEN === null) {
-        const [, token] = param.split(/[=&]/);
-        localStorage.setItem('@Spotanalysis:accessToken', token);
-        spotify.setAccessToken(ACCESS_TOKEN);
-        return;
-      }
       spotify.setAccessToken(ACCESS_TOKEN);
       spotify.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE', (err, data) => {
         if (err) {

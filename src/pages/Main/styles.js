@@ -29,6 +29,28 @@ const TracksButton = styled.button`
   }
 `;
 
+const Select = styled.button`
+  height: 45px;
+  padding: 20px;
+  margin-top: 10px;
+  background: transparent;
+  border: 2px solid #e5556e;
+  color: #e5556e;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.5s
+  border-radius: 6px;
+  width: 30%;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+
+  &:hover {
+    background: #e6304c;
+    color: white;
+  }
+`;
+
 const Wrap = styled.div`
   display: flex;
   flex-direction: column;
@@ -90,5 +112,5 @@ const Logo = styled.img`
 `;
 
 export {
-  Container, Form, Logo, Wrap, Error, TracksButton,
+  Container, Form, Logo, Wrap, Error, TracksButton, Select,
 };

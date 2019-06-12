@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -6,9 +7,10 @@ import api from '../../services/api';
 
 import AudioFeatureTable from '../../components/AudioFeatureTable/index';
 import Spinner from '../../components/Spinner/index';
+import Bubble from '../../components/BubbleChart/index';
 
 import {
-  Container, Form, Logo, Wrap, Error, TracksButton,
+  Container, Form, Logo, Wrap, Error, TracksButton, Select,
 } from './styles';
 
 import logo from '../../assets/logo.png';
@@ -18,8 +20,13 @@ class Main extends Component {
     value: '',
     loading: false,
     error: '',
+    showGraph: false,
+    loud_danc: '',
+    en_danc: '',
     track: '',
-    isTrackLoaded: false,
+    isTrackLoaded: '',
+    selected: 'playlist',
+    playlistInfo: '',
   };
 
   async componentDidMount() {
@@ -33,21 +40,26 @@ class Main extends Component {
         spotify.setAccessToken(token);
         window.location.reload();
       } else {
-        window.location.href = 'https://spotanalysis-back.herokuapp.com/login';
+        window.location.href = 'https://spotanalysis-back.herokuapp.com/';
       }
     } else {
       spotify.setAccessToken(ACCESS_TOKEN);
       spotify.getArtistAlbums('43ZHCT0cAZBISjO8DG9PnE', (err, data) => {
         if (err) {
           localStorage.removeItem('@Spotanalysis:accessToken');
-          window.location.href = 'https://spotanalysis-back.herokuapp.com/login';
+          window.location.href = 'https://spotanalysis-back.herokuapp.com/';
         }
       });
     }
   }
 
   loadAudioFeaturesTable = (track) => {
-    this.setState({ track, loading: false, isTrackLoaded: true });
+    this.setState({
+      track,
+      loading: false,
+      isTrackLoaded: true,
+      showGraph: false,
+    });
   };
 
   getAudioFeatures = async (val) => {
@@ -70,13 +82,98 @@ class Main extends Component {
 
       this.loadAudioFeaturesTable(res.data);
     } catch (err) {
-      this.setState({ error: err.toString(), loading: false });
+      this.setState({ error: err.toString(), loading: false, showGraph: false });
+    }
+  };
+
+  getUserPlaylist = async (val) => {
+    this.setState({ loading: true, showGraph: false });
+
+    const [, id] = val.split('playlist/');
+
+    try {
+      const playlistInfo = await spotify.getPlaylist(id);
+      delete playlistInfo.tracks;
+
+      this.setState({ playlistInfo });
+
+      let offset = 0;
+      let songs = [];
+
+      const ids = [];
+      while (true) {
+        const content = await spotify.getPlaylistTracks(id, { limit: 100, offset });
+        songs = songs.concat(content.items);
+
+        if (content.next !== null) offset += 100;
+        else break;
+      }
+
+      for (let i = 0; i < songs.length; i += 1) {
+        ids.push(songs[i].track.id);
+      }
+
+      let index = 0;
+      const af = [];
+      while (index < ids.length) {
+        let tmp = [];
+        for (let i = index; i < index + 50; i += 1) {
+          tmp.push(ids[i]);
+        }
+
+        af.push(await spotify.getAudioFeaturesForTracks(tmp));
+
+        index += 50;
+        tmp += '';
+      }
+
+      const en_danc = [];
+      const loud_danc = [];
+      for (let i = 0; i < af.length; i += 1) {
+        for (let j = 0; j < af[i].audio_features.length; j += 1) {
+          en_danc.push({
+            data: {
+              label: songs[j].track.name,
+              y: af[i].audio_features[j].energy,
+              x: af[i].audio_features[j].danceability,
+              r: 2,
+            },
+          });
+          loud_danc.push({
+            data: {
+              label: songs[j].track.name,
+              y: af[i].audio_features[j].loudness,
+              x: af[i].audio_features[j].danceability,
+              r: 2,
+            },
+          });
+        }
+      }
+
+      this.setState({
+        loading: false,
+        showGraph: true,
+        loud_danc,
+        en_danc,
+        isTrackLoaded: false,
+      });
+    } catch (err) {
+      this.setState({ error: err.toString(), loading: false, isTrackLoaded: false });
     }
   };
 
   render() {
     const {
-      value, error, loading, track, isTrackLoaded,
+      value,
+      error,
+      loading,
+      showGraph,
+      loud_danc,
+      en_danc,
+      track,
+      isTrackLoaded,
+      selected,
+      playlistInfo,
     } = this.state;
 
     return (
@@ -93,7 +190,9 @@ class Main extends Component {
           <Form>
             <input
               type="text"
-              placeholder="Search for a song"
+              placeholder={
+                selected === 'playlist' ? 'Playlist Audio Features' : 'Track Audio Features'
+              }
               value={value}
               onChange={e => this.setState({ value: e.target.value })}
             />
@@ -103,18 +202,40 @@ class Main extends Component {
               onClick={(e) => {
                 e.preventDefault();
                 this.setState({ value: '' });
-                this.getAudioFeatures(value);
+                if (selected === 'playlist') this.getUserPlaylist(value);
+                else this.getAudioFeatures(value);
               }}
             >
               OK
             </button>
           </Form>
-          <Link to="/tracks">
-            <TracksButton>See all</TracksButton>
-          </Link>
-          <Spinner loading={loading} />
-          {isTrackLoaded ? <AudioFeatureTable track={track} /> : ''}
+          <div>
+            <Link to="/tracks">
+              <TracksButton>See all</TracksButton>
+            </Link>
+            {selected === 'track' ? (
+              <Select onClick={() => this.setState({ selected: 'playlist' })}>Playlist</Select>
+            ) : (
+              <Select onClick={() => this.setState({ selected: 'track' })}>Track</Select>
+            )}
+          </div>
         </Wrap>
+        <br />
+
+        <Spinner loading={loading} />
+
+        {showGraph ? (
+          <Bubble data={loud_danc} info={playlistInfo} title="Loudness x Danceability" />
+        ) : (
+          ''
+        )}
+        {showGraph ? (
+          <Bubble data={en_danc} info={playlistInfo} title="Energy x Danceability" />
+        ) : (
+          ''
+        )}
+
+        {isTrackLoaded ? <AudioFeatureTable track={track} /> : ''}
       </Container>
     );
   }
